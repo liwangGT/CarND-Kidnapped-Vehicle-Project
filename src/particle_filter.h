@@ -78,7 +78,7 @@ public:
 	 * @param predicted Vector of predicted landmark observations
 	 * @param observations Vector of landmark observations
 	 */
-	void dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations);
+	double dataAssociation(const Map &map_landmarks, std::vector<LandmarkObs>& observations, double std_landmark[]);
 	
 	/**
 	 * updateWeights Updates the weights for each particle based on the likelihood of the 
@@ -101,10 +101,12 @@ public:
 	 * Set a particles list of associations, along with the associations calculated world x,y coordinates
 	 * This can be a very useful debugging tool to make sure transformations are correct and assocations correctly connected
 	 */
-	Particle SetAssociations(Particle& particle, const std::vector<int>& associations,
+	void SetAssociations(Particle& particle, const std::vector<int>& associations,
 		                     const std::vector<double>& sense_x, const std::vector<double>& sense_y);
 
-	
+	// convert load observations to global coordinates
+    void Obs2Global(const std::vector<LandmarkObs> obsL, Particle &particle, std::vector<LandmarkObs>& obsG);
+    
 	std::string getAssociations(Particle best);
 	std::string getSenseX(Particle best);
 	std::string getSenseY(Particle best);
