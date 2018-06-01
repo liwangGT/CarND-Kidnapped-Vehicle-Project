@@ -24,7 +24,7 @@ void ParticleFilter::init(double x, double y, double theta, double stdin[]) {
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-    num_particles = 100;
+    num_particles = 10;
     default_random_engine generator;
     normal_distribution<double> x_gen(x, stdin[0]);
     normal_distribution<double> y_gen(y, stdin[1]);
@@ -81,10 +81,12 @@ double ParticleFilter::dataAssociation(const Map &map_landmarks, std::vector<Lan
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
     double prob=1;
+    double dist_min = 1e10;
+    int j_min = -1;
     auto predicted = map_landmarks.landmark_list;
 	for (int i =0; i<observations.size(); i++){
-		double dist_min = -1;
-		int j_min = -1;
+		dist_min = 1e10;
+		j_min = -1;
 		for (int j = 0; j<predicted.size(); j++){
 			double dist = sqrt(pow(observations[i].x-predicted[j].x_f,2)
 				             + pow(observations[i].y-predicted[j].y_f, 2));
@@ -94,7 +96,7 @@ double ParticleFilter::dataAssociation(const Map &map_landmarks, std::vector<Lan
 			}
 		}
         prob *= exp(-0.5*(std_landmark[0]*pow(observations[i].x-predicted[j_min].x_f,2) +
-                          std_landmark[1]*pow(observations[i].y-predicted[j_min].y_f,2) ))/(2*M_PI*std_landmark[0]*std_landmark[1]);
+                          std_landmark[1]*pow(observations[i].y-predicted[j_min].y_f,2) ))/(2*M_PI*sqrt(std_landmark[0]*std_landmark[1]));
 		observations[i].id = predicted[j_min].id_i;
 		predicted.erase(predicted.begin()+j_min);
 	}
@@ -118,9 +120,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     for (int i=0; i<num_particles; i++){
         // transform map_landmarks into local coordinates
         std::vector<LandmarkObs> obsG;
+        cout<<"Convert to glabal"<<endl;
         Obs2Global(observations, particles[i], obsG);
         
         // match map_landmarks to observations, return probability as weights
+        cout<<"calculate new weights"<<endl;
         particles[i].weight = dataAssociation(map_landmarks, obsG, std_landmark);
     }
 }

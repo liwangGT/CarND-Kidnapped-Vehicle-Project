@@ -64,7 +64,7 @@ int main()
         if (event == "telemetry") {
           // j[1] is the data JSON object
 
-
+            cout<<"new data"<<endl;
           if (!pf.initialized()) {
 
           	// Sense noisy position data from the simulator
@@ -81,7 +81,8 @@ int main()
 
 			pf.prediction(delta_t, sigma_pos, previous_velocity, previous_yawrate);
 		  }
-
+           
+            cout<<"predition done"<<endl;
 		  // receive noisy observation data from the simulator
 		  // sense_observations in JSON format [{obs_x,obs_y},{obs_x,obs_y},...{obs_x,obs_y}]
 		  	vector<LandmarkObs> noisy_observations;
@@ -111,7 +112,9 @@ int main()
         	}
 
 		  // Update the weights and resample
+            cout<< "updating weights"<<endl;
 		  pf.updateWeights(sensor_range, sigma_landmark, noisy_observations, map);
+            cout<< "resampling"<<endl;
 		  pf.resample();
 
 		  // Calculate and output the average weighted error of the particle filter over all time steps so far.
@@ -141,8 +144,10 @@ int main()
           msgJson["best_particle_sense_y"] = pf.getSenseY(best_particle);
 
           auto msg = "42[\"best_particle\"," + msgJson.dump() + "]";
-          // std::cout << msg << std::endl;
+          std::cout << msg << std::endl;
+            cout<<"sending"<<endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+            cout<<"sent"<<endl;
 	  
         }
       } else {
