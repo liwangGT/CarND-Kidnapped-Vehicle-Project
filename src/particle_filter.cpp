@@ -24,7 +24,7 @@ void ParticleFilter::init(double x, double y, double theta, double stdin[]) {
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-    num_particles = 10;
+    num_particles = 100;
     default_random_engine generator;
     normal_distribution<double> x_gen(x, stdin[0]);
     normal_distribution<double> y_gen(y, stdin[1]);
@@ -50,11 +50,11 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	// NOTE: When adding noise you may find std::normal_distribution and std::default_random_engine useful.
 	//  http://en.cppreference.com/w/cpp/numeric/random/normal_distribution
 	//  http://www.cplusplus.com/reference/random/default_random_engine/
+    default_random_engine generator;
+    normal_distribution<double> x_gen(0, std_pos[0]);
+    normal_distribution<double> y_gen(0, std_pos[1]);
+    normal_distribution<double> theta_gen(0, std_pos[2]);
     for (int i =0; i<num_particles; i++){
-    	default_random_engine generator;
-	    normal_distribution<double> x_gen(0, std_pos[0]);
-	    normal_distribution<double> y_gen(0, std_pos[1]);
-	    normal_distribution<double> theta_gen(0, std_pos[2]);
         particles[i].x += velocity*cos(particles[i].theta)*delta_t + x_gen(generator);
 		particles[i].y += velocity*sin(particles[i].theta)*delta_t + y_gen(generator);
 		particles[i].theta += yaw_rate*delta_t + theta_gen(generator);
@@ -95,8 +95,8 @@ double ParticleFilter::dataAssociation(const Map &map_landmarks, std::vector<Lan
 				j_min = j;
 			}
 		}
-        prob *= exp(-0.5*(std_landmark[0]*pow(observations[i].x-predicted[j_min].x_f,2) +
-                          std_landmark[1]*pow(observations[i].y-predicted[j_min].y_f,2) ))/(2*M_PI*sqrt(std_landmark[0]*std_landmark[1]));
+        prob *= exp(-0.5*(pow(observations[i].x-predicted[j_min].x_f,2)/std_landmark[0] +
+                          pow(observations[i].y-predicted[j_min].y_f,2)/std_landmark[1] ))/(2*M_PI*sqrt(std_landmark[0]*std_landmark[1]));
 		observations[i].id = predicted[j_min].id_i;
 		predicted.erase(predicted.begin()+j_min);
 	}
@@ -120,12 +120,23 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     for (int i=0; i<num_particles; i++){
         // transform map_landmarks into local coordinates
         std::vector<LandmarkObs> obsG;
-        cout<<"Convert to glabal"<<endl;
+        //cout<<"Convert to glabal"<<endl;
+        //cout<<observations[i].id<<","<<observations[i+1].id<<endl;
         Obs2Global(observations, particles[i], obsG);
         
         // match map_landmarks to observations, return probability as weights
-        cout<<"calculate new weights"<<endl;
+        //cout<<"calculate new weights"<<endl;
         particles[i].weight = dataAssociation(map_landmarks, obsG, std_landmark);
+        std::vector<int> sa;
+        std::vector<double> sx;
+        std::vector<double> sy;
+        for (int j=0; j<obsG.size(); j++){
+            sa.push_back(obsG[j].id);
+            sx.push_back(obsG[j].x);
+            sy.push_back(obsG[j].y);
+        }
+
+        SetAssociations(particles[i], sa, sx, sy);
     }
 }
 
@@ -150,9 +161,6 @@ void ParticleFilter::resample() {
 }
 
 void ParticleFilter::Obs2Global(const std::vector<LandmarkObs> obsL, Particle &particle, std::vector<LandmarkObs>& obsG){
-    std::vector<double> sx;
-    std::vector<double> sy;
-    std::vector<int> sa;
     for (int i =0; i<obsL.size(); i++){
         LandmarkObs temp;
         double ox = obsL[i].x;
@@ -160,13 +168,9 @@ void ParticleFilter::Obs2Global(const std::vector<LandmarkObs> obsL, Particle &p
         double ot = particle.theta;
         temp.x = particle.x + ox*cos(ot) - oy*sin(ot);
         temp.y = particle.y + ox*sin(ot) + oy*cos(ot);
-        temp.id = obsL[i].id;
+        temp.id = -1;
         obsG.push_back(temp);
-        sx.push_back(temp.x);
-        sy.push_back(temp.y);
-        sa.push_back(temp.id);
     }
-    SetAssociations(particle, sa, sx, sy);
 }
 
 string ParticleFilter::getAssociations(Particle best)
